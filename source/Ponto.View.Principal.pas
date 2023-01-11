@@ -15,15 +15,21 @@ type
     pnMenu: TPanel;
     btnBatatida: TSpeedButton;
     btGerarExtrato: TSpeedButton;
+    pnPrincipal: TPanel;
+    pcPrincipal: TPageControl;
+    tsExtrato: TTabSheet;
+    pnlExtratoFiltros: TPanel;
+    pnDadosSessao: TPanel;
+    lblSessaoUsuario: TLabel;
     procedure btnBatatidaClick(Sender: TObject);
     procedure btGerarExtratoClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
-    { Private declarations }
     procedure GerarExtratoBatidas;
+    procedure AbrirBatida;
   public
 
-    { Public declarations }
   end;
 
 var
@@ -32,8 +38,11 @@ var
 implementation
 
 uses
-  Ponto.Model.Entidades.Interfaces, Ponto.Model.Dao,
-  Ponto.Model.Entidade.Batida, System.SysUtils;
+  System.SysUtils,
+  Ponto.Model.Dao,
+  Ponto.View.Batida,
+  Ponto.View.Login,
+  Ponto.Constantes;
 
 {$R *.dfm}
 
@@ -45,48 +54,45 @@ begin
 end;
 
 procedure TFPrincipal.btnBatatidaClick(Sender: TObject);
-var
-  lBatida: IBatida;
-  lMsg: TStringBuilder;
 begin
-  lBatida := TBatida.New;
-  lBatida.Usuario := InputBox('Insira seu nome','Seu Nome:', string.Empty).ToUpper;
-  lBatida.DataHora := Now;
-  lBatida := DAO.Gravar(lBatida);
+  AbrirBatida;
+end;
 
-  lMsg := TStringBuilder.Create;
-  try
-    lMsg
-      .AppendLine('Ponto registra com sucesso!')
-      .AppendLine('ID: ' + lBatida.GUID)
-      .AppendLine('Usuário: ' + lBatida.Usuario)
-      .AppendLine('Hora Registrada: ' + FormatDateTime('dd/mm/yyyy hh:nn:ss',lBatida.DataHora));
-    ShowMessage(lMsg.ToString);
-    GerarExtratoBatidas;
-  finally
-    lMsg.Free;
-  end;
+procedure TFPrincipal.FormCreate(Sender: TObject);
+begin
+  Application.CreateForm(TFViewLogin, FViewLogin);
+  FViewLogin.DAO := DAO;
+  FViewLogin.ShowModal;
+  if not FViewLogin.Autenticado then
+    Application.Terminate;
+  FViewLogin.Free;
+  lblSessaoUsuario.Caption := DAO.Sessao.IDUsuario + ' - ' + DAO.Sessao.NomeUsuario;
 end;
 
 procedure TFPrincipal.FormShow(Sender: TObject);
 begin
+  pnBarra.Caption := Self.Caption;
   mmoExtratoBatidas.Lines.Clear;
+  DAO.PreencherLista(cbxFuncionario.Items, SQL_USUARIO_COMBO_EXTRATO);
 end;
 
 procedure TFPrincipal.GerarExtratoBatidas;
-var
-  lLista: TListaBatidas;
-  lBatida: IBatida;
 begin
-  lLista := DAO.SelectAll;
-  mmoExtratoBatidas.Lines.Clear;
-  for lBatida in lLista do
-  begin
-    mmoExtratoBatidas.Lines.Add('ID Batida: ' + lBatida.GUID);
-    mmoExtratoBatidas.Lines.Add('Usuario: ' + lBatida.Usuario);
-    mmoExtratoBatidas.Lines.Add(FormatDateTime('dd/mm/yyy hh:nn:ss', lBatida.DataHora));
-    mmoExtratoBatidas.Lines.Add('------------------------------------------');
+  var lDados := DAO.GetExtrato(Format(SQL_BASE_EXTRATO, ['']));
+  try
+    mmoExtratoBatidas.Lines := lDados;
+  finally
+    lDados.Free;
   end;
+end;
+
+procedure TFPrincipal.AbrirBatida;
+begin
+  Application.CreateForm(TFViewBatida, FViewBatida);
+//  FViewBatida.Caption := TSpeedButton(Sender).Caption;
+  FViewBatida.DAO := DAO;
+  FViewBatida.ShowModal;
+  FViewBatida.Free;
 end;
 
 end.

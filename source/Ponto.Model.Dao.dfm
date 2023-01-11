@@ -1,6 +1,6 @@
 object DAO: TDAO
-  OldCreateOrder = False
   OnCreate = DataModuleCreate
+  OnDestroy = DataModuleDestroy
   Height = 266
   Width = 450
   object FConexao: TFDConnection
